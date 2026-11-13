@@ -9,12 +9,12 @@ export const register = async (credentials: Credentials) =>
 
 export const login = async (credentials: Credentials) => {
   const { data } = await api.post<LoginResponse>('/auth/login', credentials)
-  if (data.access_token) localStorage.setItem('flashcards_token', data.access_token)
+  if (data.access_token) localStorage.setItem('atlas_token', data.access_token)
   return data.user ?? (await getCurrentUser())
 }
 
 export const getCurrentUser = async () => (await api.get<User>('/auth/me')).data
 
 export const logout = async () => {
-  try { await api.post('/auth/logout') } finally { localStorage.removeItem('flashcards_token') }
+  try { await api.post('/auth/logout') } finally { localStorage.removeItem('atlas_token') }
 }
