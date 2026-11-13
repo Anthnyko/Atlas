@@ -10,7 +10,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    authApi.getCurrentUser().then(setUser).catch(() => localStorage.removeItem('flashcards_token')).finally(() => setLoading(false))
+    authApi.getCurrentUser().then(setUser).catch(() => localStorage.removeItem('atlas_token')).finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (credentials: Credentials) => { setUser(await authApi.login(credentials)) }, [])
