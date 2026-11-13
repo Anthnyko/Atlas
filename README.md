@@ -1,4 +1,4 @@
-# 📘 Flashcards — Full‑Stack Spaced Repetition Learning App
+# 📘 Atlas — Full‑Stack Spaced Repetition Learning App
 
 A full‑stack flashcard learning platform built with **FastAPI**, **React**, and **PostgreSQL**, designed to help users study more effectively using spaced repetition. The project is fully containerized with **Docker Compose** and includes a complete backend API, a responsive frontend UI, and persistent database storage.
 
