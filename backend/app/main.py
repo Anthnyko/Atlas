@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.routers import auth, decks, cards, study, search, tags
@@ -37,3 +38,8 @@ def get_db():
 @app.get("/health")
 def health_check():
     return {"status":"ok"}
+
+@app.get("/health/db")
+def health_check_db(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+    return {"status": "ok", "db": "ok"}
