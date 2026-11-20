@@ -1,55 +1,70 @@
 from datetime import datetime
-from sqlalchemy.orm import Session
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.models.card import Card
 from app.models.review_history import ReviewHistory
 
-def get_next_card(deck_id: int, user_id: int, db: Session):
-    now = datetime.utcnow()
 
-    # 1. Get latest review row per card
-    latest_review = (
+def _latest_reviews(user_id: int, db: Session):
+    return (
         db.query(
             ReviewHistory.card_id,
-            func.max(ReviewHistory.timestamp).label("latest_timestamp")
+            func.max(ReviewHistory.id).label("review_id"),
         )
         .filter(ReviewHistory.user_id == user_id)
         .group_by(ReviewHistory.card_id)
         .subquery()
     )
 
-    # 2. Due cards (correct logic)
+
+def get_next_card(deck_id: int, user_id: int, db: Session):
+    now = datetime.utcnow()
+    latest_reviews = _latest_reviews(user_id, db)
+
+    due_card = (
+        db.query(Card)
+        .join(latest_reviews, latest_reviews.c.card_id == Card.id)
+        .join(ReviewHistory, ReviewHistory.id == latest_reviews.c.review_id)
+        .filter(Card.deck_id == deck_id, ReviewHistory.next_review_date <= now)
+        .order_by(ReviewHistory.next_review_date, Card.id)
+        .first()
+    )
+    if due_card:
+        return due_card
+
+    return (
+        db.query(Card)
+        .outerjoin(latest_reviews, latest_reviews.c.card_id == Card.id)
+        .filter(Card.deck_id == deck_id, latest_reviews.c.review_id.is_(None))
+        .order_by(Card.id)
+        .first()
+    )
+
+
+def get_study_counts(deck_id: int, user_id: int, db: Session) -> dict[str, int]:
+    now = datetime.utcnow()
+    latest_reviews = _latest_reviews(user_id, db)
+    total_cards = db.query(func.count(Card.id)).filter(Card.deck_id == deck_id).scalar() or 0
     due_cards = (
-        db.query(Card)
-        .join(latest_review, latest_review.c.card_id == Card.id)
-        .join(
-            ReviewHistory,
-            (ReviewHistory.card_id == Card.id) &
-            (ReviewHistory.timestamp == latest_review.c.latest_timestamp)
-        )
-        .filter(
-            Card.deck_id == deck_id,
-            ReviewHistory.next_review_date <= now
-        )
-        .order_by(ReviewHistory.next_review_date.asc())
-        .all()
+        db.query(func.count(Card.id))
+        .join(latest_reviews, latest_reviews.c.card_id == Card.id)
+        .join(ReviewHistory, ReviewHistory.id == latest_reviews.c.review_id)
+        .filter(Card.deck_id == deck_id, ReviewHistory.next_review_date <= now)
+        .scalar()
+        or 0
     )
-
-    if due_cards:
-        return due_cards[0]
-
-    # 3. New cards (never reviewed)
     new_cards = (
-        db.query(Card)
-        .filter(Card.deck_id == deck_id)
-        .outerjoin(ReviewHistory, ReviewHistory.card_id == Card.id)
-        .filter(ReviewHistory.id.is_(None))
-        .all()
+        db.query(func.count(Card.id))
+        .outerjoin(latest_reviews, latest_reviews.c.card_id == Card.id)
+        .filter(Card.deck_id == deck_id, latest_reviews.c.review_id.is_(None))
+        .scalar()
+        or 0
     )
-
-    if new_cards:
-        return new_cards[0]
-
-    # 4. No cards left
-    return None
+    return {
+        "total_cards": total_cards,
+        "due_cards": due_cards,
+        "new_cards": new_cards,
+        "completed_cards": total_cards - due_cards - new_cards,
+    }
