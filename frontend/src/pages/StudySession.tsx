@@ -8,6 +8,7 @@ import {
   submitAnswer,
   type Progress,
   type StudyCard,
+  type StudyQuality,
 } from '../api/study'
 
 export default function StudySession() {
@@ -56,11 +57,11 @@ export default function StudySession() {
     if (Number.isInteger(deckId)) void setup()
   }, [deckId, setup])
 
-  const answer = async (wasCorrect: boolean) => {
+  const answer = async (quality: StudyQuality) => {
     if (!card) return
     setLoading(true)
     try {
-      await submitAnswer(card.card_id, wasCorrect)
+      await submitAnswer(card.card_id, quality)
       await Promise.all([next(), getProgress(deckId).then(setProgress)])
     } catch {
       setError('Could not record your answer.')
@@ -127,20 +128,37 @@ export default function StudySession() {
                 Answer
               </p>
               <p className="mt-3 whitespace-pre-wrap text-lg">{card.back}</p>
-              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <p className="mt-7 text-sm text-slate-500">
+                How well did you remember it?
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-4">
                 <button
                   className="button-danger py-3"
-                  onClick={() => void answer(false)}
+                  onClick={() => void answer(1)}
                   disabled={loading}
                 >
-                  I got it wrong
+                  Again
+                </button>
+                <button
+                  className="button-secondary py-3"
+                  onClick={() => void answer(3)}
+                  disabled={loading}
+                >
+                  Hard
+                </button>
+                <button
+                  className="button-secondary py-3"
+                  onClick={() => void answer(4)}
+                  disabled={loading}
+                >
+                  Good
                 </button>
                 <button
                   className="button-primary py-3"
-                  onClick={() => void answer(true)}
+                  onClick={() => void answer(5)}
                   disabled={loading}
                 >
-                  I got it right
+                  Easy
                 </button>
               </div>
             </div>

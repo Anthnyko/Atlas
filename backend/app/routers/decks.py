@@ -1,7 +1,4 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -10,21 +7,17 @@ from app.models.deck import Deck
 from app.models.review_history import ReviewHistory
 from app.models.user import User
 from app.schemas.deck import DeckCreate, DeckOut
+from app.core.selector import get_study_counts
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
 
 def serialize_deck(deck: Deck, db: Session, user_id: int) -> dict:
-    due_cards = db.query(func.count(func.distinct(ReviewHistory.card_id))).filter(
-        ReviewHistory.deck_id == deck.id,
-        ReviewHistory.user_id == user_id,
-        ReviewHistory.next_review_date <= datetime.utcnow(),
-    ).scalar() or 0
     return {
         "id": deck.id,
         "name": deck.name,
         "description": deck.description,
-        "due_cards": due_cards,
+        "due_cards": get_study_counts(deck.id, user_id, db)["due_cards"],
     }
 
 
